@@ -1,0 +1,10 @@
+version: '3.2'
+
+services:
+  express:
+    platform: linux/amd64
+    build: 
+      context: .
+      dockerfile: ./DockerFile
+    ports:
+      - "3250:3000"
