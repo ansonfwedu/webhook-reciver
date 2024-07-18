@@ -1,0 +1,10 @@
+version: '3.2'
+
+services:
+  express-server-dev:
+    platform: linux/amd64
+    build: 
+      context: .
+      dockerfile: ./DockerFile
+    ports:
+      - "23000:23000"

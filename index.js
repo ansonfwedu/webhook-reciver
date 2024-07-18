@@ -1,11 +1,9 @@
 import express from "express";
 import * as crypto from "crypto";
 import dotenv from "dotenv";
-import NodeCache from "node-cache";
 
 dotenv.config();
 const app = express();
-const cache = new NodeCache();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -15,14 +13,6 @@ const parseServerHeader = {
 };
 
 async function parseServerAuth() {
-  const cacheKey = "parse-server-sessionToken";
-  const token = cache.get(cacheKey);
-
-  if (token) {
-    console.log("Session token found in memory cache");
-    return token;
-  }
-
   const res = await fetch(`${process.env.PARSE_SERVER_URL}/login`, {
     method: "POST",
     headers: parseServerHeader,
@@ -32,8 +22,6 @@ async function parseServerAuth() {
     }),
   });
   const authData = await res.json();
-
-  cache.set("parse-server-sessionToken", authData, 3 * 24 * 60 * 60);
   return authData;
 }
 
@@ -81,6 +69,8 @@ app.get("/is_server_running", async (request, response) => {
       );
       const data = await parseServerRes.json();
       response.send(data);
+    } else {
+      console.log(`Login to Parse server failed`);
     }
   } catch (error) {
     response.send(error);
@@ -98,24 +88,24 @@ app.post("/zoom-webhook", async (request, response) => {
   if (authData.sessionToken) {
     console.log("Login to Parse server success");
     try {
-      const parseServerRes = await fetch(
-        `${process.env.PARSE_SERVER_URL}/functions/getZoomWebhookSecret`,
-        {
-          method: "POST",
-          headers: {
-            ...parseServerHeader,
-            "x-parse-session-token": authData.sessionToken,
-          },
-          body: JSON.stringify({
-            zoom_events: { headers: request.headers, body: body },
-          }),
-        }
-      );
-      const parseServerData = await parseServerRes.json();
-
-      console.log(`Successfully get secret token from Parse server`);
-
       if (body.event === "endpoint.url_validation") {
+        const parseServerRes = await fetch(
+          `${process.env.PARSE_SERVER_URL}/functions/getZoomWebhookSecret`,
+          {
+            method: "POST",
+            headers: {
+              ...parseServerHeader,
+              "x-parse-session-token": authData.sessionToken,
+            },
+            body: JSON.stringify({
+              zoom_events: { headers: request.headers, body: body },
+            }),
+          }
+        );
+        const parseServerData = await parseServerRes.json();
+
+        console.log(`Successfully get secret token from Parse server`);
+
         const hashForVaildate = crypto
           .createHmac("sha256", parseServerData["result"])
           .update(body.payload.plainToken)
@@ -128,7 +118,7 @@ app.post("/zoom-webhook", async (request, response) => {
 
         response.json(data);
       } else {
-        fetch(`${process.env.PARSE_SERVER_URL}/functions/zoomWebhook`, {
+        await fetch(`${process.env.PARSE_SERVER_URL}/functions/zoomWebhook`, {
           method: "POST",
           headers: {
             ...parseServerHeader,
@@ -138,12 +128,13 @@ app.post("/zoom-webhook", async (request, response) => {
             zoom_events: { headers: request.headers, body: body },
           }),
         });
-
-        response.json({ status: 200, message: "Zoom event forward success" });
+        console.log("Zoom event forward success");
       }
     } catch (error) {
-      response.json({ status: 141, error: error });
+      console.log(`${error}`);
     }
+  } else {
+    console.log(`Login to Parse server failed`);
   }
 });
 

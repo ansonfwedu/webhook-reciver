@@ -1,7 +1,7 @@
 version: '3.2'
 
 services:
-  express-server:
+  express-server-prod:
     platform: linux/amd64
     build: 
       context: .
