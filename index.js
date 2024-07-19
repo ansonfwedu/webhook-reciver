@@ -2,6 +2,7 @@ import express from "express";
 import * as crypto from "crypto";
 import dotenv from "dotenv";
 
+
 dotenv.config();
 const app = express();
 app.use(express.json());
@@ -141,5 +142,6 @@ app.post("/zoom-webhook", async (request, response) => {
 const port = 23000;
 
 app.listen(port, () => {
+  console.log(`Parse server: ${process.env.PARSE_SERVER_URL}`)
   console.log(`http://localhost:${port}`);
 });

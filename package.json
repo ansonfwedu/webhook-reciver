@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "config": "^3.3.12",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "node-cache": "^5.1.2"

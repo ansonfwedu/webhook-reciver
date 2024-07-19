@@ -7,4 +7,7 @@ services:
       context: .
       dockerfile: ./DockerFile
     ports:
-      - "23000:23000"
+      - 23000:23000
+    environment:
+      - PARSE_SERVER_URL=https://parse-dev.fungwingstar.com/parse
+      - PARSE_SERVER_APP_ID=fungwingplus_dev
