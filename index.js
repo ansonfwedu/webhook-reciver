@@ -72,7 +72,7 @@ app.get("/is_server_running", async (request, response) => {
       }
     );
     const data = await parseServerRes.json();
-    response.send(data);
+    response.status(200).send(data);
   } else {
     console.log(`Login to Parse server failed`);
   }
@@ -133,12 +133,14 @@ app.post("/zoom-webhook", async (request, response) => {
           }),
         });
         console.log("Zoom event forward success");
+        response.status(204);
       } catch (error) {
-        console.log("Zoom event forward failed");
+        response.status(500).json({ message: "Zoom event forward failed" });
       }
     }
   } else {
     console.log(`Login to Parse server failed`);
+    response.status(500).json({ message: "Login to Parse server failed" });
   }
 });
 
