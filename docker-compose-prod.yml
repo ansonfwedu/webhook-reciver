@@ -8,6 +8,7 @@ services:
       dockerfile: ./DockerFile
     ports:
       - 23000:23000
-    environment:
-      - PARSE_SERVER_URL=https://api.fungwingstar.com/parse
-      - PARSE_SERVER_APP_ID=fungwingplus_prod
+    # Environment setting no effect on NAS server
+    # environment:
+    #   - PARSE_SERVER_URL=https://api.fungwingstar.com/parse
+    #   - PARSE_SERVER_APP_ID=fungwingplus_prod

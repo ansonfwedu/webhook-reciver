@@ -2,7 +2,6 @@ import express from "express";
 import * as crypto from "crypto";
 import dotenv from "dotenv";
 
-
 dotenv.config();
 const app = express();
 app.use(express.json());
@@ -14,16 +13,20 @@ const parseServerHeader = {
 };
 
 async function parseServerAuth() {
-  const res = await fetch(`${process.env.PARSE_SERVER_URL}/login`, {
-    method: "POST",
-    headers: parseServerHeader,
-    body: JSON.stringify({
-      username: process.env.PARSE_SERVER_USERNAME,
-      password: process.env.PARSE_SERVER_USER_PASSWORD,
-    }),
-  });
-  const authData = await res.json();
-  return authData;
+  try {
+    const res = await fetch(`${process.env.PARSE_SERVER_URL}/login`, {
+      method: "POST",
+      headers: parseServerHeader,
+      body: JSON.stringify({
+        username: process.env.PARSE_SERVER_USERNAME,
+        password: process.env.PARSE_SERVER_USER_PASSWORD,
+      }),
+    });
+    const authData = await res.json();
+    return authData;
+  } catch (error) {
+    console.log(`Error ocurred during login to Parse Server: ${error}`);
+  }
 }
 
 //Test Zoom Webhook , Fung sir account
@@ -52,29 +55,26 @@ app.get("/is_server_running", async (request, response) => {
   console.log(`event: ` + JSON.stringify(body.event, null, 2));
   console.log(`payload: ` + JSON.stringify(body.payload, null, 2));
 
-  try {
-    console.log("Login to Parse Server");
+  console.log("Login to Parse Server");
 
-    const authData = await parseServerAuth();
-    if (authData.sessionToken) {
-      console.log(`Login to Parse server success`);
-      const parseServerRes = await fetch(
-        `${process.env.PARSE_SERVER_URL}/functions/test`,
-        {
-          method: "POST",
-          headers: {
-            ...parseServerHeader,
-            "x-parse-session-token": authData.sessionToken,
-          },
-        }
-      );
-      const data = await parseServerRes.json();
-      response.send(data);
-    } else {
-      console.log(`Login to Parse server failed`);
-    }
-  } catch (error) {
-    response.send(error);
+  const authData = await parseServerAuth();
+  if (authData && authData.sessionToken) {
+    console.log(`Login to Parse server success`);
+
+    const parseServerRes = await fetch(
+      `${process.env.PARSE_SERVER_URL}/functions/test`,
+      {
+        method: "POST",
+        headers: {
+          ...parseServerHeader,
+          "x-parse-session-token": authData.sessionToken,
+        },
+      }
+    );
+    const data = await parseServerRes.json();
+    response.send(data);
+  } else {
+    console.log(`Login to Parse server failed`);
   }
 });
 
@@ -86,10 +86,10 @@ app.post("/zoom-webhook", async (request, response) => {
 
   //Get specify Zoom Webhook token from parse server
   const authData = await parseServerAuth();
-  if (authData.sessionToken) {
+  if (authData && authData.sessionToken) {
     console.log("Login to Parse server success");
-    try {
-      if (body.event === "endpoint.url_validation") {
+    if (body.event === "endpoint.url_validation") {
+      try {
         const parseServerRes = await fetch(
           `${process.env.PARSE_SERVER_URL}/functions/getZoomWebhookSecret`,
           {
@@ -104,7 +104,6 @@ app.post("/zoom-webhook", async (request, response) => {
           }
         );
         const parseServerData = await parseServerRes.json();
-
         console.log(`Successfully get secret token from Parse server`);
 
         const hashForVaildate = crypto
@@ -118,7 +117,11 @@ app.post("/zoom-webhook", async (request, response) => {
         };
 
         response.json(data);
-      } else {
+      } catch (error) {
+        console.log(`Error ocurred during endpoint url validation`);
+      }
+    } else {
+      try {
         await fetch(`${process.env.PARSE_SERVER_URL}/functions/zoomWebhook`, {
           method: "POST",
           headers: {
@@ -130,9 +133,9 @@ app.post("/zoom-webhook", async (request, response) => {
           }),
         });
         console.log("Zoom event forward success");
+      } catch (error) {
+        console.log("Zoom event forward failed");
       }
-    } catch (error) {
-      console.log(`${error}`);
     }
   } else {
     console.log(`Login to Parse server failed`);
@@ -142,6 +145,6 @@ app.post("/zoom-webhook", async (request, response) => {
 const port = 23000;
 
 app.listen(port, () => {
-  console.log(`Parse server: ${process.env.PARSE_SERVER_URL}`)
+  console.log(`Parse server: ${process.env.PARSE_SERVER_URL}`);
   console.log(`http://localhost:${port}`);
 });
